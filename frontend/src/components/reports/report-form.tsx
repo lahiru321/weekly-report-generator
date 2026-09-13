@@ -26,10 +26,12 @@ interface ReportFormProps {
   report?: ReportDetail;
   defaultWeekStart: string;
   projects: Project[];
+  /** The week is chosen outside the form (e.g. by a week picker), so the week field is read-only. */
+  lockWeek?: boolean;
 }
 
 /** The fixed weekly report form. Every user gets exactly the same sections in the same order. */
-export function ReportForm({ report, defaultWeekStart, projects }: ReportFormProps) {
+export function ReportForm({ report, defaultWeekStart, projects, lockWeek = false }: ReportFormProps) {
   const router = useRouter();
   const [busy, setBusy] = useState<"draft" | "submit" | null>(null);
 
@@ -48,7 +50,8 @@ export function ReportForm({ report, defaultWeekStart, projects }: ReportFormPro
   const weekStart = useWatch({ control, name: "weekStart" });
   const hours = useWatch({ control, name: "hoursByType" });
   const totalHours = TASK_TYPES.reduce((sum, type) => sum + (Number(hours?.[type]) || 0), 0);
-  const weekLocked = (report?.currentVersion ?? 0) > 0;
+  const submittedBefore = (report?.currentVersion ?? 0) > 0;
+  const weekLocked = lockWeek || submittedBefore;
 
   function checkReadyToSubmit(values: ReportFormValues) {
     let ready = true;
@@ -110,11 +113,13 @@ export function ReportForm({ report, defaultWeekStart, projects }: ReportFormPro
             htmlFor="weekStart"
             error={errors.weekStart?.message}
             hint={
-              weekLocked
+              submittedBefore
                 ? "The week can't change after the first submission."
-                : weekStart
-                  ? `Covers ${formatWeek(weekStart)}`
-                  : "Pick any day of the week"
+                : lockWeek
+                  ? `Covers ${formatWeek(weekStart)}. Use the week picker above to change it.`
+                  : weekStart
+                    ? `Covers ${formatWeek(weekStart)}`
+                    : "Pick any day of the week"
             }
           >
             <Input
