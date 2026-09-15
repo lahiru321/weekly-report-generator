@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { LogOut, Menu } from "lucide-react";
+import { ChatWidget } from "@/components/ai/chat-widget";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,6 +54,9 @@ export function AppShell({ user, children }: { user: User; children: React.React
         </header>
         <main className="flex-1 p-4 md:p-6">{children}</main>
       </div>
+
+      {/* The AI assistant reads the whole team's reports, so only managers and admins get it */}
+      {user.role !== "MEMBER" && <ChatWidget />}
     </div>
   );
 }
