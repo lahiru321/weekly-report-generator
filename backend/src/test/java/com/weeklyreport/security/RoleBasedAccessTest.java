@@ -2,6 +2,9 @@ package com.weeklyreport.security;
 
 import com.weeklyreport.admin.AdminUserController;
 import com.weeklyreport.admin.AdminUserService;
+import com.weeklyreport.ai.AiController;
+import com.weeklyreport.ai.AiService;
+import com.weeklyreport.ai.dto.AiReply;
 import com.weeklyreport.config.SecurityConfig;
 import com.weeklyreport.dashboard.DashboardController;
 import com.weeklyreport.dashboard.DashboardService;
@@ -22,6 +25,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.Instant;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -42,7 +46,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         ReportController.class,
         ManagerReportController.class,
         DashboardController.class,
-        AdminUserController.class
+        AdminUserController.class,
+        AiController.class
 })
 @Import({SecurityConfig.class, JwtService.class, AuthCookieService.class})
 class RoleBasedAccessTest {
@@ -67,6 +72,8 @@ class RoleBasedAccessTest {
     private DashboardService dashboardService;
     @MockitoBean
     private AdminUserService adminUserService;
+    @MockitoBean
+    private AiService aiService;
 
     private User member;
     private User manager;
@@ -142,6 +149,33 @@ class RoleBasedAccessTest {
 
         verify(reportService, never()).update(any(), anyLong(), any());
         verify(workflowService, never()).submit(any(), anyLong());
+    }
+
+    @Test
+    void onlyManagersCanUseTheAiAssistant() throws Exception {
+        String chatBody = """
+                {"messages": [{"role": "user", "content": "Who has blockers this week?"}]}
+                """;
+        when(aiService.chat(any())).thenReturn(new AiReply("No blockers", Instant.now()));
+
+        Cookie memberCookie = loginCookie(member);
+        mockMvc.perform(get("/api/manager/ai/status").cookie(memberCookie)).andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/manager/ai/summary").cookie(memberCookie)).andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/manager/ai/chat").cookie(memberCookie)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(chatBody))
+                .andExpect(status().isForbidden());
+        verify(aiService, never()).chat(any());
+
+        Cookie managerCookie = loginCookie(manager);
+        mockMvc.perform(post("/api/manager/ai/chat").cookie(managerCookie)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(chatBody))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/manager/ai/chat").cookie(managerCookie)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"messages\": []}"))
+                .andExpect(status().isBadRequest());
     }
 
     private Cookie loginCookie(User user) {

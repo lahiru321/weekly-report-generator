@@ -236,3 +236,19 @@ export interface CreateUserRequest {
   role: Role;
   password: string;
 }
+
+// ---- AI assistant ----
+
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface AiReply {
+  text: string;
+  generatedAt: string;
+}
+
+export interface AiStatus {
+  enabled: boolean;
+}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, CheckCheck, FileCheck, MessageSquareWarning } from "lucide-react";
+import { AiSummaryCard } from "@/components/ai/ai-summary-card";
 import { RequireRole } from "@/components/auth/require-role";
 import { PageHeader } from "@/components/common/page-header";
 import { ErrorState, LoadingState } from "@/components/common/state-message";
@@ -83,6 +84,8 @@ export default function DashboardPage() {
             />
           </div>
         )}
+
+        <AiSummaryCard week={week} />
 
         <Card>
           <CardHeader>
